@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="styles.css">
     
     <style>
-        /* Game Styling */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -25,7 +24,7 @@
             position: relative;
             overflow: hidden;
             border: 2px solid #000;
-            touch-action: none; /* Prevents browser gestures from interfering */
+            touch-action: none;
         }
         #basket {
             width: 60px;
@@ -56,22 +55,18 @@
 </head>
 <body>
 
-    <!-- Game Area -->
     <div id="game-area">
         <div id="basket"></div>
     </div>
 
-    <!-- Game Controls -->
     <div id="controls">
         <button id="start-button">Start Game</button>
         <button id="restart-button" style="display: none;">Start Over</button>
     </div>
 
-    <!-- Game Info -->
     <div id="score">Score: 0</div>
     <div id="misses">Misses Left: 3</div>
 
-    <!-- JavaScript for Game Logic -->
     <script>
         const gameArea = document.getElementById("game-area");
         const basket = document.getElementById("basket");
@@ -82,10 +77,16 @@
 
         let score = 0;
         let misses = 3;
-        let gameInterval;
         let isGameRunning = false;
+        let ballSpeed = 5; // Initial ball speed
+        let spawnRate = 1000; // Ball spawn interval (in ms)
+        let speedIncreaseRate = 5000; // Increase speed every 5 sec
+        let spawnIncreaseRate = 15000; // Increase spawn rate every 15 sec
 
-        // Start the game
+        let gameInterval;
+        let speedInterval;
+        let spawnInterval;
+
         startButton.addEventListener("click", function() {
             startButton.style.display = "none";
             restartButton.style.display = "inline-block";
@@ -93,12 +94,10 @@
             startGame();
         });
 
-        // Restart the game
         restartButton.addEventListener("click", function() {
             location.reload();
         });
 
-        // Move basket with keyboard
         document.addEventListener("keydown", function(event) {
             let basketLeft = basket.offsetLeft;
             if (event.key === "ArrowLeft" && basketLeft > 0) {
@@ -108,7 +107,6 @@
             }
         });
 
-        // Move basket with mouse
         gameArea.addEventListener("mousemove", function(event) {
             const gameRect = gameArea.getBoundingClientRect();
             let newLeft = event.clientX - gameRect.left - basket.offsetWidth / 2;
@@ -116,9 +114,8 @@
             basket.style.left = newLeft + "px";
         });
 
-        // Move basket with touch (for mobile)
         gameArea.addEventListener("touchmove", function(event) {
-            event.preventDefault(); // Prevent scrolling
+            event.preventDefault();
             const touch = event.touches[0];
             const gameRect = gameArea.getBoundingClientRect();
             let newLeft = touch.clientX - gameRect.left - basket.offsetWidth / 2;
@@ -126,15 +123,18 @@
             basket.style.left = newLeft + "px";
         });
 
-        // Start game logic
         function startGame() {
-            gameInterval = setInterval(() => {
-                if (!isGameRunning) return;
-                createBall();
-            }, 1000);
+            gameInterval = setInterval(createBall, spawnRate);
+            speedInterval = setInterval(() => { ballSpeed += 1; }, speedIncreaseRate);
+            spawnInterval = setInterval(() => {
+                if (spawnRate > 400) { // Prevent spawn rate from becoming too fast
+                    spawnRate -= 100;
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(createBall, spawnRate);
+                }
+            }, spawnIncreaseRate);
         }
 
-        // Create falling balls
         function createBall() {
             const ball = document.createElement("div");
             ball.classList.add("ball");
@@ -147,9 +147,8 @@
                     return;
                 }
 
-                ball.style.top = ball.offsetTop + 5 + "px";
+                ball.style.top = ball.offsetTop + ballSpeed + "px";
 
-                // Check if ball hits the basket
                 if (ball.offsetTop + ball.offsetHeight >= basket.offsetTop && 
                     ball.offsetLeft + ball.offsetWidth >= basket.offsetLeft &&
                     ball.offsetLeft <= basket.offsetLeft + basket.offsetWidth) {
@@ -160,7 +159,6 @@
                     ball.remove();
                 }
 
-                // Check if ball missed
                 if (ball.offsetTop > gameArea.offsetHeight) {
                     misses--;
                     missesDisplay.textContent = "Misses Left: " + misses;
@@ -174,11 +172,12 @@
             }, 50);
         }
 
-        // End game
         function endGame() {
             isGameRunning = false;
             alert("Game Over! Your score: " + score);
             clearInterval(gameInterval);
+            clearInterval(speedInterval);
+            clearInterval(spawnInterval);
         }
     </script>
 

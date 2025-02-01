@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head> 
-    <!-- Google Ads (Ensure it's correctly implemented in your AdSense account) -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9500597777393150"
+    <!-- Google Ads -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9500597777393150" 
      crossorigin="anonymous"></script>
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catch the Falling Balls</title>
     
-    <!-- Link to external stylesheet -->
     <link rel="stylesheet" href="styles.css">
     
     <style>
-        /* Basic styles for game layout */
+        /* Game Styling */
         body {
             font-family: Arial, sans-serif;
             text-align: center;
@@ -27,7 +26,7 @@
             border: 2px solid #000;
         }
         #basket {
-            width: 50px;
+            width: 60px;
             height: 30px;
             background-color: red;
             position: absolute;
@@ -35,15 +34,20 @@
             left: 50%;
             transform: translateX(-50%);
         }
+        .ball {
+            width: 20px;
+            height: 20px;
+            background-color: blue;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+        }
         #controls {
             margin: 20px 0;
         }
-        #misses {
+        #misses, #score {
             font-weight: bold;
             margin: 10px 0;
-        }
-        #high-scores {
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -60,27 +64,101 @@
         <button id="restart-button" style="display: none;">Start Over</button>
     </div>
 
-    <!-- Misses Counter -->
+    <!-- Game Info -->
+    <div id="score">Score: 0</div>
     <div id="misses">Misses Left: 3</div>
 
-    <!-- High Scores List -->
-    <div id="high-scores">
-        <h3>High Scores</h3>
-        <ul id="high-score-list"></ul>
-    </div>
-
-    <!-- JavaScript File (Link External if Needed) -->
+    <!-- JavaScript for Game Logic -->
     <script>
-        document.getElementById("start-button").addEventListener("click", function() {
-            document.getElementById("start-button").style.display = "none";
-            document.getElementById("restart-button").style.display = "inline-block";
-            // Start game logic here
-            console.log("Game Started");
+        const gameArea = document.getElementById("game-area");
+        const basket = document.getElementById("basket");
+        const startButton = document.getElementById("start-button");
+        const restartButton = document.getElementById("restart-button");
+        const scoreDisplay = document.getElementById("score");
+        const missesDisplay = document.getElementById("misses");
+
+        let score = 0;
+        let misses = 3;
+        let gameInterval;
+        let isGameRunning = false;
+
+        // Start the game
+        startButton.addEventListener("click", function() {
+            startButton.style.display = "none";
+            restartButton.style.display = "inline-block";
+            isGameRunning = true;
+            startGame();
         });
 
-        document.getElementById("restart-button").addEventListener("click", function() {
-            location.reload(); // Simple restart
+        // Restart the game
+        restartButton.addEventListener("click", function() {
+            location.reload(); // Simple page reload
         });
+
+        // Move basket left and right
+        document.addEventListener("keydown", function(event) {
+            let basketLeft = basket.offsetLeft;
+            if (event.key === "ArrowLeft" && basketLeft > 0) {
+                basket.style.left = basketLeft - 20 + "px";
+            } else if (event.key === "ArrowRight" && basketLeft < gameArea.offsetWidth - basket.offsetWidth) {
+                basket.style.left = basketLeft + 20 + "px";
+            }
+        });
+
+        // Start game logic
+        function startGame() {
+            gameInterval = setInterval(() => {
+                if (!isGameRunning) return;
+                createBall();
+            }, 1000);
+        }
+
+        // Create falling balls
+        function createBall() {
+            const ball = document.createElement("div");
+            ball.classList.add("ball");
+            ball.style.left = Math.random() * (gameArea.offsetWidth - 20) + "px";
+            gameArea.appendChild(ball);
+
+            let fallInterval = setInterval(() => {
+                if (!isGameRunning) {
+                    clearInterval(fallInterval);
+                    return;
+                }
+
+                ball.style.top = ball.offsetTop + 5 + "px";
+
+                // Check if ball hits the basket
+                if (ball.offsetTop + ball.offsetHeight >= basket.offsetTop && 
+                    ball.offsetLeft + ball.offsetWidth >= basket.offsetLeft &&
+                    ball.offsetLeft <= basket.offsetLeft + basket.offsetWidth) {
+                    
+                    score++;
+                    scoreDisplay.textContent = "Score: " + score;
+                    clearInterval(fallInterval);
+                    ball.remove();
+                }
+
+                // Check if ball missed
+                if (ball.offsetTop > gameArea.offsetHeight) {
+                    misses--;
+                    missesDisplay.textContent = "Misses Left: " + misses;
+                    clearInterval(fallInterval);
+                    ball.remove();
+
+                    if (misses === 0) {
+                        endGame();
+                    }
+                }
+            }, 50);
+        }
+
+        // End game
+        function endGame() {
+            isGameRunning = false;
+            alert("Game Over! Your score: " + score);
+            clearInterval(gameInterval);
+        }
     </script>
 
 </body>

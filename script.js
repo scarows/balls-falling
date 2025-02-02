@@ -1,20 +1,21 @@
-// Import the functions you need from the SDKs you need
+// Import Firebase SDK
 import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
 
-// Your web app's Firebase configuration
+// Firebase configuration (Replace with your actual Firebase config)
 const firebaseConfig = {
-  apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",
-  authDomain: "fallling-balls-leaderbord.firebaseapp.com",
-  projectId: "fallling-balls-leaderbord",
-  storageBucket: "fallling-balls-leaderbord.firebasestorage.app",
-  messagingSenderId: "268577112583",
-  appId: "1:268577112583:web:ccafd3547a1bbee3f2a0a2"
+    apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",
+    authDomain: "fallling-balls-leaderbord.firebaseapp.com",
+    projectId: "fallling-balls-leaderbord",
+    storageBucket: "fallling-balls-leaderbord.firebasestorage.app",
+    messagingSenderId: "268577112583",
+    appId: "1:268577112583:web:ccafd3547a1bbee3f2a0a2"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
 const scoreDisplay = document.getElementById('score');
@@ -27,7 +28,6 @@ let score = 0;
 let misses = 3;
 let fallingSpeed = 5;
 let gameInterval;
-let highScores = [];
 
 function createObject() {
     const object = document.createElement('div');
@@ -92,29 +92,44 @@ function startGame() {
 
 function endGame() {
     clearInterval(gameInterval);
-    alert('Game Over! Your score is ' + score);
-    updateHighScores(score);
+    let playerName = prompt("Game Over! Enter your name for the leaderboard:");
+    if (playerName) {
+        submitScore(playerName, score);
+    }
     startButton.style.display = 'none';
     restartButton.style.display = 'block';
 }
 
-function updateHighScores(score) {
-    highScores.push(score);
-    highScores.sort((a, b) => b - a);
-    highScores = highScores.slice(0, 5);
-    displayHighScores();
+// Submit score to Firebase Firestore
+async function submitScore(playerName, score) {
+    try {
+        await addDoc(collection(db, "leaderboard"), {
+            name: playerName,
+            score: score,
+            timestamp: new Date()
+        });
+        console.log("Score submitted!");
+        loadLeaderboard(); // Refresh leaderboard after submitting
+    } catch (error) {
+        console.error("Error adding score:", error);
+    }
 }
 
-function displayHighScores() {
-    highScoreList.innerHTML = '';
-    highScores.forEach((score, index) => {
-        const li = document.createElement('li');
-        li.textContent = `${index + 1}. ${score}`;
-        highScoreList.appendChild(li);
+// Load leaderboard from Firebase
+async function loadLeaderboard() {
+    const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(5));
+    const querySnapshot = await getDocs(q);
+    
+    let leaderboardHTML = "";
+    querySnapshot.forEach(doc => {
+        let data = doc.data();
+        leaderboardHTML += `<li>${data.name}: ${data.score}</li>`;
     });
+    highScoreList.innerHTML = leaderboardHTML;
 }
+
+// Load leaderboard on page load
+window.onload = loadLeaderboard;
 
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', startGame);
-
-displayHighScores();

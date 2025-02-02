@@ -1,3 +1,20 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",
+  authDomain: "fallling-balls-leaderbord.firebaseapp.com",
+  projectId: "fallling-balls-leaderbord",
+  storageBucket: "fallling-balls-leaderbord.firebasestorage.app",
+  messagingSenderId: "268577112583",
+  appId: "1:268577112583:web:ccafd3547a1bbee3f2a0a2"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
 const scoreDisplay = document.getElementById('score');

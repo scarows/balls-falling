@@ -1,3 +1,4 @@
+document.getElementById("debug-message").textContent = "JavaScript is working!";
 // Firebase configuration (Replace with your actual Firebase config)
 const firebaseConfig = {
     apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",

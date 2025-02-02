@@ -1,4 +1,4 @@
-// Firebase configuration (Replace with your actual Firebase config)
+// Firebase Configuration
 const firebaseConfig = {
     apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",
     authDomain: "fallling-balls-leaderbord.firebaseapp.com",
@@ -9,11 +9,12 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 document.getElementById("debug-message").textContent = "Firebase Loaded!";
 
+// Select Elements
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
 const scoreDisplay = document.getElementById('score');
@@ -27,14 +28,18 @@ let misses = 3;
 let fallingSpeed = 5;
 let gameInterval;
 
+// Function to Create Falling Objects
 function createObject() {
     const object = document.createElement('div');
     object.classList.add('object');
     object.style.left = Math.random() * (gameArea.clientWidth - 30) + 'px';
+    object.style.position = "absolute";
+    object.style.top = "0px";
     gameArea.appendChild(object);
 
     const fallInterval = setInterval(() => {
-        if (parseInt(object.style.top) + object.clientHeight >= gameArea.clientHeight) {
+        let topPosition = parseInt(object.style.top) || 0;
+        if (topPosition + object.clientHeight >= gameArea.clientHeight) {
             clearInterval(fallInterval);
             gameArea.removeChild(object);
             misses--;
@@ -43,7 +48,7 @@ function createObject() {
                 endGame();
             }
         } else {
-            object.style.top = (parseInt(object.style.top) || 0) + fallingSpeed + 'px';
+            object.style.top = (topPosition + fallingSpeed) + 'px';
             if (isCaught(object)) {
                 clearInterval(fallInterval);
                 gameArea.removeChild(object);
@@ -57,6 +62,7 @@ function createObject() {
     }, 50);
 }
 
+// Function to Check If Object is Caught
 function isCaught(object) {
     const basketRect = basket.getBoundingClientRect();
     const objectRect = object.getBoundingClientRect();
@@ -68,15 +74,16 @@ function isCaught(object) {
     );
 }
 
+// Move Basket with Mouse
 document.addEventListener('mousemove', (e) => {
     const rect = gameArea.getBoundingClientRect();
     const basketWidth = basket.clientWidth;
-    const x = e.clientX - rect.left;
-    if (x >= 0 && x <= rect.width) {
-        basket.style.left = (x - basketWidth / 2) + 'px';
-    }
+    let x = e.clientX - rect.left;
+    x = Math.max(0, Math.min(x - basketWidth / 2, rect.width - basketWidth));
+    basket.style.left = x + 'px';
 });
 
+// Start Game Function
 function startGame() {
     score = 0;
     misses = 3;
@@ -88,36 +95,38 @@ function startGame() {
     gameInterval = setInterval(createObject, 1000);
 }
 
+// End Game Function
 function endGame() {
     clearInterval(gameInterval);
-    let playerName = prompt("Game Over! Enter your name for the leaderboard:");
+    alert("Game Over! Your score: " + score);
+    let playerName = prompt("Enter your name for the leaderboard:");
     if (playerName) {
         submitScore(playerName, score);
     }
-    startButton.style.display = 'none';
+    startButton.style.display = 'block';
     restartButton.style.display = 'block';
 }
 
-// Submit score to Firebase Firestore
+// Submit Score to Firebase Firestore
 async function submitScore(playerName, score) {
     try {
-        await addDoc(collection(db, "leaderboard"), {
+        await db.collection("leaderboard").add({
             name: playerName,
             score: score,
-            timestamp: new Date()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
         console.log("Score submitted!");
-        loadLeaderboard(); // Refresh leaderboard after submitting
+        loadLeaderboard();
     } catch (error) {
         console.error("Error adding score:", error);
     }
 }
 
-// Load leaderboard from Firebase
+// Load Leaderboard from Firebase
 async function loadLeaderboard() {
-    const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(5));
-    const querySnapshot = await getDocs(q);
-    
+    const q = db.collection("leaderboard").orderBy("score", "desc").limit(5);
+    const querySnapshot = await q.get();
+
     let leaderboardHTML = "";
     querySnapshot.forEach(doc => {
         let data = doc.data();
@@ -126,8 +135,9 @@ async function loadLeaderboard() {
     highScoreList.innerHTML = leaderboardHTML;
 }
 
-// Load leaderboard on page load
+// Load leaderboard when the page loads
 window.onload = loadLeaderboard;
 
+// Event Listeners for Buttons
 startButton.addEventListener('click', startGame);
-restartButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', () => location.reload());

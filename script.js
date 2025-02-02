@@ -40,16 +40,16 @@ document.getElementById("save-name").addEventListener("click", function () {
     document.getElementById("game-area").style.display = "block";
 });
 
-// Function to Save Score to Firebase
+// Function to Save Score to Firestore
 function saveScore(score) {
     if (playerName !== "") {
-        db.collection("leaderboard").add({
+        db.collection("leaderboard").add({  // Saving to "leaderboard" collection
             name: playerName,
             score: score,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-            console.log("Score saved!");
-            loadLeaderboard(); // Refresh leaderboard
+            console.log("Score saved successfully!");
+            loadLeaderboard(); // Refresh leaderboard after saving
         }).catch((error) => {
             console.error("Error saving score:", error);
         });
@@ -61,7 +61,7 @@ function loadLeaderboard() {
     const leaderboardList = document.getElementById("leaderboard-list");
     leaderboardList.innerHTML = ""; // Clear old list
 
-    db.collection("leaderboard")
+    db.collection("leaderboard") // Fetch from correct collection
         .orderBy("score", "desc") // Order by highest score
         .limit(5) // Show top 5 scores
         .get()
@@ -77,9 +77,8 @@ function loadLeaderboard() {
         });
 }
 
-// Call leaderboard function on page load
+// Call leaderboard function when the page loads
 document.addEventListener("DOMContentLoaded", loadLeaderboard);
-
 
 let score = 0;
 let misses = 3;

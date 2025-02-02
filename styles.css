@@ -6,8 +6,10 @@ body {
     justify-content: center;
     height: 100vh;
     background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
 }
 
+/* Game Area */
 #game-area {
     position: relative;
     width: 100%;
@@ -17,6 +19,7 @@ body {
     background-color: #fff;
 }
 
+/* Basket */
 #basket {
     position: absolute;
     bottom: 10px;
@@ -26,8 +29,10 @@ body {
     border-radius: 10px;
     left: 50%;
     transform: translateX(-50%);
+    transition: left 0.1s ease-out;
 }
 
+/* Falling Objects */
 .object {
     position: absolute;
     width: 30px;
@@ -37,22 +42,38 @@ body {
     left: 50%;
 }
 
+/* Score & Controls */
 #score, #misses, #controls {
     font-size: 24px;
     margin: 10px;
 }
 
-#high-scores {
+/* Leaderboard */
+#leaderboard {
     margin-top: 20px;
     text-align: center;
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    width: 300px;
+}
+
+#leaderboard h3 {
+    margin-bottom: 10px;
 }
 
 #high-score-list {
     list-style-type: none;
     padding: 0;
+    margin: 0;
 }
 
 #high-score-list li {
     font-size: 20px;
     margin: 5px 0;
+    padding: 5px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    font-weight: bold;
 }

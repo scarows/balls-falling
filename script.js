@@ -1,7 +1,3 @@
-// Import Firebase SDK
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs } from "firebase/firestore";
-
 // Firebase configuration (Replace with your actual Firebase config)
 const firebaseConfig = {
     apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",

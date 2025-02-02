@@ -14,6 +14,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 const app = initializeApp(firebaseConfig);
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
@@ -22,6 +24,62 @@ const missesDisplay = document.getElementById('misses');
 const highScoreList = document.getElementById('high-score-list');
 const startButton = document.getElementById('start-button');
 const restartButton = document.getElementById('restart-button');
+
+let playerName = "";
+
+// Handle Name Input
+document.getElementById("save-name").addEventListener("click", function () {
+    playerName = document.getElementById("player-name").value.trim();
+    
+    if (playerName === "") {
+        alert("Please enter your name.");
+        return;
+    }
+
+    document.getElementById("name-input-container").style.display = "none";
+    document.getElementById("game-area").style.display = "block";
+});
+
+// Function to Save Score to Firebase
+function saveScore(score) {
+    if (playerName !== "") {
+        db.collection("leaderboard").add({
+            name: playerName,
+            score: score,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            console.log("Score saved!");
+            loadLeaderboard(); // Refresh leaderboard
+        }).catch((error) => {
+            console.error("Error saving score:", error);
+        });
+    }
+}
+
+// Function to Load and Display Leaderboard
+function loadLeaderboard() {
+    const leaderboardList = document.getElementById("leaderboard-list");
+    leaderboardList.innerHTML = ""; // Clear old list
+
+    db.collection("leaderboard")
+        .orderBy("score", "desc") // Order by highest score
+        .limit(5) // Show top 5 scores
+        .get()
+        .then((snapshot) => {
+            snapshot.forEach((doc) => {
+                let data = doc.data();
+                let listItem = document.createElement("li");
+                listItem.textContent = `${data.name}: ${data.score}`;
+                leaderboardList.appendChild(listItem);
+            });
+        }).catch((error) => {
+            console.error("Error loading leaderboard:", error);
+        });
+}
+
+// Call leaderboard function on page load
+document.addEventListener("DOMContentLoaded", loadLeaderboard);
+
 
 let score = 0;
 let misses = 3;

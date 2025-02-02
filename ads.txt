@@ -1,2 +1,1 @@
-google.com, pub-9500597777393150, DIRECT, f08c47fec0942fa0
 google.com, pub-1406200684468536, DIRECT, f08c47fec0942fa0

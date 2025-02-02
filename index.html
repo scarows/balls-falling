@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head> 
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <!-- Google Ads -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9500597777393150" 
+     crossorigin="anonymous"></script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Falling Balls</title>
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            overflow: hidden;
+        }
+        #game-area {
+            width: 100%;
+            height: 400px;
+            background-color: lightgray;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #000;
+            touch-action: none;
+        }
+        #basket {
+            width: 60px;
+            height: 30px;
+            background-color: red;
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.1s ease-out;
+        }
+        .ball {
+            width: 20px;
+            height: 20px;
+            background-color: blue;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+        }
+        #controls {
+            margin: 20px 0;
+        }
+        #misses, #score {
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-area">
+        <div id="basket"></div>
+    </div>
+
+    <div id="controls">
+        <button id="start-button">Start Game</button>
+        <button id="restart-button" style="display: none;">Start Over</button>
+    </div>
+
+    <div id="score">Score: 0</div>
+    <div id="misses">Misses Left: 3</div>
+
+    <script>
+        const gameArea = document.getElementById("game-area");
+        const basket = document.getElementById("basket");
+        const startButton = document.getElementById("start-button");
+        const restartButton = document.getElementById("restart-button");
+        const scoreDisplay = document.getElementById("score");
+        const missesDisplay = document.getElementById("misses");
+
+        let score = 0;
+        let misses = 3;
+        let isGameRunning = false;
+        let ballSpeed = 5; // Initial ball speed
+        let spawnRate = 1000; // Ball spawn interval (in ms)
+        let speedIncreaseRate = 5000; // Increase speed every 5 sec
+        let spawnIncreaseRate = 15000; // Increase spawn rate every 15 sec
+
+        let gameInterval;
+        let speedInterval;
+        let spawnInterval;
+
+        startButton.addEventListener("click", function() {
+            startButton.style.display = "none";
+            restartButton.style.display = "inline-block";
+            isGameRunning = true;
+            startGame();
+        });
+
+        restartButton.addEventListener("click", function() {
+            location.reload();
+        });
+
+        document.addEventListener("keydown", function(event) {
+            let basketLeft = basket.offsetLeft;
+            if (event.key === "ArrowLeft" && basketLeft > 0) {
+                basket.style.left = basketLeft - 20 + "px";
+            } else if (event.key === "ArrowRight" && basketLeft < gameArea.offsetWidth - basket.offsetWidth) {
+                basket.style.left = basketLeft + 20 + "px";
+            }
+        });
+
+        gameArea.addEventListener("mousemove", function(event) {
+            const gameRect = gameArea.getBoundingClientRect();
+            let newLeft = event.clientX - gameRect.left - basket.offsetWidth / 2;
+            newLeft = Math.max(0, Math.min(newLeft, gameArea.offsetWidth - basket.offsetWidth));
+            basket.style.left = newLeft + "px";
+        });
+
+        gameArea.addEventListener("touchmove", function(event) {
+            event.preventDefault();
+            const touch = event.touches[0];
+            const gameRect = gameArea.getBoundingClientRect();
+            let newLeft = touch.clientX - gameRect.left - basket.offsetWidth / 2;
+            newLeft = Math.max(0, Math.min(newLeft, gameArea.offsetWidth - basket.offsetWidth));
+            basket.style.left = newLeft + "px";
+        });
+
+        function startGame() {
+            gameInterval = setInterval(createBall, spawnRate);
+            speedInterval = setInterval(() => { ballSpeed += 1; }, speedIncreaseRate);
+            spawnInterval = setInterval(() => {
+                if (spawnRate > 400) { // Prevent spawn rate from becoming too fast
+                    spawnRate -= 100;
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(createBall, spawnRate);
+                }
+            }, spawnIncreaseRate);
+        }
+
+        function createBall() {
+            const ball = document.createElement("div");
+            ball.classList.add("ball");
+            ball.style.left = Math.random() * (gameArea.offsetWidth - 20) + "px";
+            gameArea.appendChild(ball);
+
+            let fallInterval = setInterval(() => {
+                if (!isGameRunning) {
+                    clearInterval(fallInterval);
+                    return;
+                }
+
+                ball.style.top = ball.offsetTop + ballSpeed + "px";
+
+                if (ball.offsetTop + ball.offsetHeight >= basket.offsetTop && 
+                    ball.offsetLeft + ball.offsetWidth >= basket.offsetLeft &&
+                    ball.offsetLeft <= basket.offsetLeft + basket.offsetWidth) {
+                    
+                    score++;
+                    scoreDisplay.textContent = "Score: " + score;
+                    clearInterval(fallInterval);
+                    ball.remove();
+                }
+
+                if (ball.offsetTop > gameArea.offsetHeight) {
+                    misses--;
+                    missesDisplay.textContent = "Misses Left: " + misses;
+                    clearInterval(fallInterval);
+                    ball.remove();
+
+                    if (misses === 0) {
+                        endGame();
+                    }
+                }
+            }, 50);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            alert("Game Over! Your score: " + score);
+            clearInterval(gameInterval);
+            clearInterval(speedInterval);
+            clearInterval(spawnInterval);
+        }
+    </script>
+
+</body>
+</html>

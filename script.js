@@ -1,5 +1,6 @@
 npm i @vercel/analytics
-import { inject } from "@vercel/analytics"
+import { inject } from '@vercel/analytics';
+inject();
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
 const scoreDisplay = document.getElementById('score');

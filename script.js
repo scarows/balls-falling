@@ -1,22 +1,3 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyBQ5kUkvHTxjKtZ8WrNCJ9Gd_yNqbSKOuI",
-  authDomain: "fallling-balls-leaderbord.firebaseapp.com",
-  projectId: "fallling-balls-leaderbord",
-  storageBucket: "fallling-balls-leaderbord.firebasestorage.app",
-  messagingSenderId: "268577112583",
-  appId: "1:268577112583:web:ccafd3547a1bbee3f2a0a2"
-};
-
-// Initialize Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const app = initializeApp(firebaseConfig);
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
 const scoreDisplay = document.getElementById('score');
@@ -40,42 +21,42 @@ document.getElementById("save-name").addEventListener("click", function () {
     document.getElementById("game-area").style.display = "block";
 });
 
-// Function to Save Score to Firestore
 function saveScore(score) {
     if (playerName !== "") {
-        db.collection("leaderboard").add({  // Saving to "leaderboard" collection
-            name: playerName,
-            score: score,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            console.log("Score saved successfully!");
-            loadLeaderboard(); // Refresh leaderboard after saving
-        }).catch((error) => {
-            console.error("Error saving score:", error);
-        });
+        let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+        // Add new score
+        leaderboard.push({ name: playerName, score: score });
+
+        // Sort by highest score
+        leaderboard.sort((a, b) => b.score - a.score);
+
+        // Keep only top 5 scores
+        leaderboard = leaderboard.slice(0, 5);
+
+        // Save back to local storage
+        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+
+        console.log("Score saved locally!");
+        loadLeaderboard(); // Refresh leaderboard
     }
 }
 
-// Function to Load and Display Leaderboard
 function loadLeaderboard() {
     const leaderboardList = document.getElementById("leaderboard-list");
     leaderboardList.innerHTML = ""; // Clear old list
 
-    db.collection("leaderboard") // Fetch from correct collection
-        .orderBy("score", "desc") // Order by highest score
-        .limit(5) // Show top 5 scores
-        .get()
-        .then((snapshot) => {
-            snapshot.forEach((doc) => {
-                let data = doc.data();
-                let listItem = document.createElement("li");
-                listItem.textContent = `${data.name}: ${data.score}`;
-                leaderboardList.appendChild(listItem);
-            });
-        }).catch((error) => {
-            console.error("Error loading leaderboard:", error);
-        });
+    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+
+    leaderboard.forEach((entry) => {
+        let listItem = document.createElement("li");
+        listItem.textContent = `${entry.name}: ${entry.score}`;
+        leaderboardList.appendChild(listItem);
+    });
 }
+
+// Load leaderboard when the page loads
+document.addEventListener("DOMContentLoaded", loadLeaderboard);
 
 // Call leaderboard function when the page loads
 document.addEventListener("DOMContentLoaded", loadLeaderboard);

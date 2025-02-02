@@ -29,6 +29,22 @@ let fallingSpeed = 5;
 let gameInterval;
 let highScores = [];
 
+async function loadLeaderboard() {
+    const leaderboardRef = db.collection("leaderboard");
+    const querySnapshot = await leaderboardRef.orderBy("score", "desc").limit(5).get();
+
+    let leaderboardHTML = "";
+    querySnapshot.forEach(doc => {
+        let data = doc.data();
+        leaderboardHTML += `<li>${data.name}: ${data.score}</li>`;
+    });
+
+    document.getElementById("leaderboard-list").innerHTML = leaderboardHTML;
+}
+
+// Load leaderboard when the page loads
+window.onload = loadLeaderboard;
+
 function createObject() {
     const object = document.createElement('div');
     object.classList.add('object');
@@ -97,6 +113,21 @@ function endGame() {
     startButton.style.display = 'none';
     restartButton.style.display = 'block';
 }
+
+function saveScore(playerName, playerScore) {
+    db.collection("leaderboard").add({
+        name: playerName,
+        score: playerScore,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    })
+    .then(() => {
+        console.log("Score added successfully!");
+        loadLeaderboard(); // Refresh leaderboard after saving
+    })
+    .catch(error => {
+        console.error("Error saving score: ", error);
+    });
+                    }
 
 function updateHighScores(score) {
     highScores.push(score);

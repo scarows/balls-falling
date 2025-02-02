@@ -13,6 +13,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+document.getElementById("debug-message").textContent = "Firebase Loaded!";
+
 const basket = document.getElementById('basket');
 const gameArea = document.getElementById('game-area');
 const scoreDisplay = document.getElementById('score');

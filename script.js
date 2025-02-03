@@ -21,33 +21,38 @@ document.getElementById("save-name").addEventListener("click", function () {
     document.getElementById("game-area").style.display = "block";
 });
 
-function saveScore(score) {
-    if (playerName !== "") {
-        let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+// Function to Save Score in Cookies
+function saveScore(playerName, score) {
+    // Get existing leaderboard data from cookies
+    let leaderboard = getCookie("leaderboard");
+    leaderboard = leaderboard ? JSON.parse(leaderboard) : [];
 
-        // Add new score
-        leaderboard.push({ name: playerName, score: score });
+    // Add new score
+    leaderboard.push({ name: playerName, score: score });
 
-        // Sort by highest score
-        leaderboard.sort((a, b) => b.score - a.score);
+    // Sort leaderboard from highest to lowest score
+    leaderboard.sort((a, b) => b.score - a.score);
 
-        // Keep only top 5 scores
-        leaderboard = leaderboard.slice(0, 5);
+    // Keep only the top 5 scores
+    leaderboard = leaderboard.slice(0, 5);
 
-        // Save back to local storage
-        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-
-        console.log("Score saved locally!");
-        loadLeaderboard(); // Refresh leaderboard
-    }
+    // Save updated leaderboard back to cookies
+    setCookie("leaderboard", JSON.stringify(leaderboard), 365);
+    
+    // Update leaderboard display
+    loadLeaderboard();
 }
 
+// Function to Load and Display Leaderboard from Cookies
 function loadLeaderboard() {
     const leaderboardList = document.getElementById("leaderboard-list");
-    leaderboardList.innerHTML = ""; // Clear old list
+    leaderboardList.innerHTML = ""; // Clear old leaderboard
 
-    let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || [];
+    // Get leaderboard data from cookies
+    let leaderboard = getCookie("leaderboard");
+    leaderboard = leaderboard ? JSON.parse(leaderboard) : [];
 
+    // Display each score
     leaderboard.forEach((entry) => {
         let listItem = document.createElement("li");
         listItem.textContent = `${entry.name}: ${entry.score}`;
@@ -55,11 +60,32 @@ function loadLeaderboard() {
     });
 }
 
-// Load leaderboard when the page loads
-document.addEventListener("DOMContentLoaded", loadLeaderboard);
+// Function to Set a Cookie
+function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+        expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + value + "; path=/" + expires;
+}
 
-// Call leaderboard function when the page loads
-document.addEventListener("DOMContentLoaded", loadLeaderboard);
+// Function to Get a Cookie
+function getCookie(name) {
+    let nameEQ = name + "=";
+    let cookiesArray = document.cookie.split(";");
+    for (let i = 0; i < cookiesArray.length; i++) {
+        let cookie = cookiesArray[i].trim();
+        if (cookie.indexOf(nameEQ) === 0) {
+            return cookie.substring(nameEQ.length, cookie.length);
+        }
+    }
+    return null;
+}
+
+// Load leaderboard when page loads
+window.onload = loadLeaderboard;
 
 let score = 0;
 let misses = 3;

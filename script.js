@@ -63,14 +63,18 @@ function createBall() {
         }
 
         ball.style.top = (parseInt(ball.style.top) || 0) + fallingSpeed + 'px';
+// Check if ball is caught
+function isCaught(ball) {
+    const basketRect = basket.getBoundingClientRect();
+    const ballRect = ball.getBoundingClientRect();
 
-        // Check if ball is caught
-        if (isCaught(ball)) {
-            clearInterval(fallInterval);
-            ball.remove();
-            score++;
-            scoreDisplay.textContent = 'Score: ' + score;
-        }
+    return (
+        ballRect.bottom >= basketRect.top &&  // Ball reaches the top of the basket
+        ballRect.top <= basketRect.bottom &&  // Ball can enter from the sides
+        ballRect.right >= basketRect.left - 10 && // Allow slight margin for side catches
+        ballRect.left <= basketRect.right + 10  // Allow slight margin for side catches
+    );
+}
 
         // Check if ball is missed
         if (parseInt(ball.style.top) + ball.clientHeight >= gameArea.clientHeight) {

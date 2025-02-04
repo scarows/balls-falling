@@ -30,15 +30,24 @@ saveNameButton.addEventListener('click', () => {
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', () => location.reload());
 
-// Basket Movement
-document.addEventListener('mousemove', (e) => {
+// Basket Movement (Mouse + Touch)
+function moveBasket(x) {
     const rect = gameArea.getBoundingClientRect();
     const basketWidth = basket.clientWidth;
-    const x = e.clientX - rect.left;
-    if (x >= 0 && x <= rect.width) {
-        basket.style.left = (x - basketWidth / 2) + 'px';
+    const newX = x - rect.left;
+    if (newX >= 0 && newX <= rect.width) {
+        basket.style.left = (newX - basketWidth / 2) + 'px';
     }
-});
+}
+
+// Mouse Movement
+document.addEventListener('mousemove', (e) => moveBasket(e.clientX));
+
+// Touch Movement (Mobile)
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // Prevent scrolling while playing
+    moveBasket(e.touches[0].clientX);
+}, { passive: false });
 
 // Create Falling Ball
 function createBall() {

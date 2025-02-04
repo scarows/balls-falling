@@ -104,12 +104,32 @@ function startGame() {
     isGameRunning = true;
     score = 0;
     misses = 3;
-    fallingSpeed = 5;
+    fallingSpeed = 5; // Initial speed
+    let spawnRate = 1000; // Initial spawn rate (1 ball per second)
+    
     scoreDisplay.textContent = 'Score: ' + score;
     missesDisplay.textContent = 'Misses Left: ' + misses;
     startButton.style.display = 'none';
     restartButton.style.display = 'inline-block';
-    gameInterval = setInterval(createBall, 1000);
+
+    // Start ball dropping
+    gameInterval = setInterval(createBall, spawnRate);
+
+    // Increase speed & spawn rate over time
+    let difficultyInterval = setInterval(() => {
+        if (!isGameRunning) {
+            clearInterval(difficultyInterval);
+            return;
+        }
+
+        fallingSpeed += 0.5; // Balls fall faster over time
+        spawnRate = Math.max(1000, spawnRate - 100); // Balls spawn faster (min 300ms)
+        
+        // Restart ball drop interval with new spawn rate
+        clearInterval(gameInterval);
+        gameInterval = setInterval(createBall, spawnRate);
+
+    }, 7500); // Increases difficulty every 7.5 seconds
 }
 
 // End Game Function

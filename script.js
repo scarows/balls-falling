@@ -15,7 +15,7 @@ let fallingSpeed = 5;
 let gameInterval;
 let isGameRunning = false;
 
-// Handle Name Input
+// Handle Name Input (Only Hides Input, Doesn't Start Game)
 saveNameButton.addEventListener('click', () => {
     playerName = playerNameInput.value.trim();
     if (playerName === "") {
@@ -26,7 +26,7 @@ saveNameButton.addEventListener('click', () => {
     document.getElementById('game-area').style.display = 'block';
 });
 
-// Start Game
+// Start & Restart Game
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', () => location.reload());
 
@@ -62,19 +62,16 @@ function createBall() {
             return;
         }
 
+        // Move ball down
         ball.style.top = (parseInt(ball.style.top) || 0) + fallingSpeed + 'px';
-// Check if ball is caught
-function isCaught(ball) {
-    const basketRect = basket.getBoundingClientRect();
-    const ballRect = ball.getBoundingClientRect();
 
-    return (
-        ballRect.bottom >= basketRect.top &&  // Ball reaches the top of the basket
-        ballRect.top <= basketRect.bottom &&  // Ball can enter from the sides
-        ballRect.right >= basketRect.left - 10 && // Allow slight margin for side catches
-        ballRect.left <= basketRect.right + 10  // Allow slight margin for side catches
-    );
-}
+        // Check if the ball is caught
+        if (isCaught(ball)) {  
+            clearInterval(fallInterval);
+            ball.remove();
+            score++;
+            scoreDisplay.textContent = 'Score: ' + score;
+        }
 
         // Check if ball is missed
         if (parseInt(ball.style.top) + ball.clientHeight >= gameArea.clientHeight) {
@@ -89,14 +86,16 @@ function isCaught(ball) {
     }, 50);
 }
 
-// Check if Ball is Caught
+// Fix Basket Hitbox: Catches Balls from All Directions
 function isCaught(ball) {
     const basketRect = basket.getBoundingClientRect();
     const ballRect = ball.getBoundingClientRect();
+
     return (
-        ballRect.bottom >= basketRect.top &&
-        ballRect.left >= basketRect.left &&
-        ballRect.right <= basketRect.right
+        ballRect.bottom >= basketRect.top &&  // Ball reaches the top of the basket
+        ballRect.top <= basketRect.bottom &&  // Ball can enter from the sides
+        ballRect.right >= basketRect.left - 10 && // Allow slight margin for side catches
+        ballRect.left <= basketRect.right + 10  // Allow slight margin for side catches
     );
 }
 

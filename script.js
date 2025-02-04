@@ -129,7 +129,7 @@ function startGame() {
         clearInterval(gameInterval);
         gameInterval = setInterval(createBall, spawnRate);
 
-    }, 7500); // Increases difficulty every 7.5 seconds
+    }, 3500); // Increases difficulty every 7.5 seconds
 }
 
 // End Game Function

@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1406200684468536"
-     crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ball Catcher Game</title>
@@ -24,21 +22,21 @@
             <header class="text-center mb-8">
                 <h1 class="text-4xl md:text-6xl font-bold text-blue-500 mb-4">Ball Catcher</h1>
                 <p class="text-lg text-gray-300">Catch the balls to score points!</p>
-
+                
                 <!-- Game Mode Selection -->
                 <div v-if="!gameMode" class="mt-8 space-y-4">
                     <div class="space-y-2">
-                        <input v-model="username"
-                               type="text"
+                        <input v-model="username" 
+                               type="text" 
                                placeholder="Enter your username"
                                class="w-64 px-4 py-2 bg-gray-800 rounded-lg text-white">
                     </div>
                     <div class="space-x-4">
-                        <button @click="selectMode('single')"
+                        <button @click="selectMode('single')" 
                                 class="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition">
                             Single Player
                         </button>
-                        <button @click="selectMode('multi')"
+                        <button @click="selectMode('multi')" 
                                 class="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-600 transition">
                             Multiplayer
                         </button>
@@ -52,12 +50,12 @@
                         <span class="ml-4 text-yellow-500">
                             🪙 Coins: {{ coins }}
                         </span>
-                        <button @click="openStore"
+                        <button @click="openStore" 
                                 class="ml-2 px-3 py-1 bg-purple-600 rounded-lg hover:bg-purple-700 text-sm">
                             Store
                         </button>
 
-                        <button @click="changeUsername"
+                        <button @click="changeUsername" 
                                 class="ml-2 px-3 py-1 bg-green-600 rounded-lg hover:bg-green-700 text-sm">
                             Change Username
                         </button>
@@ -83,7 +81,7 @@
             <div class="flex flex-col md:flex-row gap-8">
                 <!-- Game Area -->
                 <div class="flex-1">
-                    <div ref="gameArea"
+                    <div ref="gameArea" 
                          @mousemove="movePaddle"
                          @touchmove="handleTouch"
                          class="relative bg-gray-800 rounded-lg overflow-hidden"
@@ -91,12 +89,12 @@
                         <!-- Paddle -->
                         <div class="absolute bottom-0 w-20 h-4 bg-blue-500 rounded-full"
                              :style="{ left: paddleX + 'px' }"></div>
-
+                        
                         <!-- Balls -->
-                        <div v-for="ball in balls"
+                        <div v-for="ball in balls" 
                              :key="ball.id"
-                             class="absolute w-4 h-4 rounded-full"
-                              :class="[ball.special ? 'bg-yellow-400 animate-pulse shadow-lg shadow-yellow-200' : ball.color,
+                             :class="['absolute w-4 h-4', 
+                                     ball.special ? 'rounded-full bg-yellow-400 animate-pulse shadow-lg shadow-yellow-200' : 'rounded-full ' + ball.color,
                                      ball.powerUp ? getPowerUpClass(ball.powerUpType) : '']"
                              :style="{ left: ball.x + 'px', top: ball.y + 'px' }">
                         </div>
@@ -111,7 +109,7 @@
                         <div class="absolute top-4 right-4 text-xl font-bold">
                             Score: {{ score }}
                         </div>
-
+                        
                         <!-- Level Display -->
                         <div class="absolute top-4 left-4 text-xl font-bold">
                             Level: {{ level }}
@@ -120,22 +118,22 @@
 
                     <!-- Game Controls -->
                     <div class="mt-4 flex justify-center gap-4">
-                        <button @click="startGame"
+                        <button @click="startGame" 
                                 :disabled="gameRunning"
                                 class="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition">
                             Start Game
                         </button>
-                        <button @click="pauseGame"
+                        <button @click="pauseGame" 
                                 :disabled="!gameRunning"
                                 class="px-6 py-2 bg-yellow-500 rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition">
                             {{ isPaused ? 'Resume' : 'Pause' }}
                         </button>
-                        <button @click="resetGame"
+                        <button @click="resetGame" 
                                 class="px-6 py-2 bg-red-500 rounded-lg hover:bg-red-600 transition">
                             Reset Game
                         </button>
                         <button v-if="gameMode"
-                                @click="switchMode"
+                                @click="switchMode" 
                                 :disabled="gameRunning"
                                 class="px-6 py-2 bg-purple-500 rounded-lg hover:bg-purple-600 disabled:opacity-50 transition">
                             Switch Mode
@@ -149,13 +147,13 @@
                         {{ gameMode === 'multi' ? 'Global Rankings' : 'Top Scores' }}
                     </h2>
                     <div class="space-y-2">
-                        <div v-for="(score, index) in topScores"
+                        <div v-for="(score, index) in topScores" 
                              :key="index"
                              :class="[
                                 'flex justify-between items-center p-2 rounded transition',
                                 score.username === user ? 'bg-blue-900' : 'bg-gray-700'
                              ]">
-                            <span class="font-bold"
+                            <span class="font-bold" 
                                   :class="[
                                     index < 3 ? 'text-yellow-400' : 'text-gray-300'
                                   ]">
@@ -214,6 +212,9 @@
                 const openStore = () => {
                     const store = document.createElement('div');
                     store.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center';
+                    const shieldCost = getUpgradeCost('shield');
+                    const slowCost = getUpgradeCost('slow'); 
+                    const multiplierCost = getUpgradeCost('multiplier');
                     store.innerHTML = `
                         <div class="bg-gray-800 p-6 rounded-lg max-w-md w-full">
                             <h2 class="text-2xl font-bold mb-4">Power-up Store</h2>
@@ -221,38 +222,44 @@
                                 <div class="flex justify-between items-center">
                                     <span>Shield Duration (${shieldUpgrade.value}s)</span>
                                     <button onclick="app.upgradePowerUp('shield')"
+                                            ${coins.value < shieldCost ? 'disabled' : ''}
                                             class="px-3 py-1 bg-blue-500 rounded">
-                                        Upgrade (${getUpgradeCost('shield')} 🪙)
+                                        Upgrade (${shieldCost} 🪙)
                                     </button>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span>Slow Duration (${slowUpgrade.value}s)</span>
                                     <button onclick="app.upgradePowerUp('slow')"
+                                            ${coins.value < slowCost ? 'disabled' : ''}
                                             class="px-3 py-1 bg-green-500 rounded">
-                                        Upgrade (${getUpgradeCost('slow')} 🪙)
+                                        Upgrade (${slowCost} 🪙)
                                     </button>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span>Multiplier Duration (${multiplierUpgrade.value}s)</span>
                                     <button onclick="app.upgradePowerUp('multiplier')"
+                                            ${coins.value < multiplierCost ? 'disabled' : ''}
                                             class="px-3 py-1 bg-purple-500 rounded">
-                                        Upgrade (${getUpgradeCost('multiplier')} 🪙)
+                                        Upgrade (${multiplierCost} 🪙)
+                                    </button>
+                                </div>
+                                <div class="text-center mt-4">
+                                    <button onclick="document.body.removeChild(this.closest('.fixed'))"
+                                            class="px-4 py-2 bg-red-500 rounded">
+                                        Close
                                     </button>
                                 </div>
                             </div>
                         </div>`;
                     document.body.appendChild(store);
-                    store.onclick = e => {
-                        if (e.target === store) document.body.removeChild(store);
-                    };
                 };
 
                 const getUpgradeCost = (type) => {
                     const base = 5;
-                    const current = type === 'shield' ? shieldUpgrade.value :
+                    const current = type === 'shield' ? shieldUpgrade.value : 
                                   type === 'slow' ? slowUpgrade.value :
                                   multiplierUpgrade.value;
-                    return Math.floor(base + (current / 5));
+                    return Math.floor(base + (current - 5));
                 };
 
                 const upgradePowerUp = (type) => {
@@ -260,7 +267,7 @@
                     if (coins.value >= cost) {
                         coins.value -= cost;
                         localStorage.setItem(`coins_${user.value}`, coins.value);
-
+                        
                         if (type === 'shield') {
                             shieldUpgrade.value += 5;
                             localStorage.setItem('shieldUpgrade', shieldUpgrade.value);
@@ -271,13 +278,17 @@
                             multiplierUpgrade.value += 3;
                             localStorage.setItem('multiplierUpgrade', multiplierUpgrade.value);
                         }
+                        
+                        // Refresh store display after purchase
+                        document.body.removeChild(document.querySelector('.fixed'));
+                        openStore();
                     }
                 };
                 const getPowerUpClass = (type) => {
                     switch(type) {
-                        case 'shield': return 'bg-blue-400 animate-pulse shadow-lg shadow-blue-200';
-                        case 'slow': return 'bg-green-400 animate-pulse shadow-lg shadow-green-200';
-                        case 'multiplier': return 'bg-purple-400 animate-pulse shadow-lg shadow-purple-200';
+                        case 'shield': return 'rounded-sm bg-blue-400 animate-pulse shadow-lg shadow-blue-200';
+                        case 'slow': return 'triangle bg-green-400 animate-pulse shadow-lg shadow-green-200';
+                        case 'multiplier': return 'star bg-purple-400 animate-pulse shadow-lg shadow-purple-200';
                         default: return '';
                     }
                 };
@@ -322,18 +333,31 @@
                             break;
                     }
                 };
-
+                
                 const login = () => {
                     if (!username.value.trim()) return;
+                    // Special admin privileges
+                    if (username.value === 'AdminNaderRquibi') {
+                        localStorage.setItem(`coins_${username.value}`, '255');
+                    }
                     user.value = username.value;
                     localStorage.setItem('username', username.value);
-                    coins.value = parseInt(localStorage.getItem(`coins_${username.value}`) || '0');
+                    coins.value = parseInt(localStorage.getItem(`coins_${username.value}`) || '0');                    
                 };
-
+                
                 const changeUsername = () => {
                     const newUsername = prompt('Enter new username:');
                     if (newUsername && newUsername.trim()) {
+                        // Store old values before reset
                         const oldUsername = user.value;
+                        
+                        // Reset upgrade levels to default
+                        shieldUpgrade.value = 10;
+                        slowUpgrade.value = 10;
+                        multiplierUpgrade.value = 7;
+                        localStorage.setItem('shieldUpgrade', '10');
+                        localStorage.setItem('slowUpgrade', '10');
+                        localStorage.setItem('multiplierUpgrade', '7');
                         user.value = newUsername;
                         username.value = newUsername;
                         localStorage.setItem('username', newUsername);
@@ -346,7 +370,7 @@
 
                 const selectMode = (mode) => {
                     if (!username.value.trim()) return;
-
+                    
                     gameMode.value = mode;
                     user.value = username.value;
                     localStorage.setItem('username', username.value);
@@ -363,7 +387,7 @@
                     clearInterval(ballInterval);
                     score.value = 0;
                     level.value = 1;
-                    lives.value = 1; // Changed to 1 life
+                    lives.value = 3;
                     balls.value = [];
                     isPaused.value = false;
                 };
@@ -375,7 +399,7 @@
 
                 const initializeMultiplayer = () => {
                     socket.value = io('http://localhost:3000');
-
+                    
                     socket.value.on('connect', () => {
                         socket.value.emit('player:join', { username: user.value });
                     });
@@ -387,22 +411,20 @@
 
                     socket.value.on('leaderboard:update', (data) => {
                         if (gameMode.value === 'multi') {
-                            topScores.value = data.slice(0, 150); // Limit to top 150 scores
-                        } else {
-                            topScores.value = data.slice(0, 5); // Keep local leaderboard to top 5
+                            topScores.value = data;
                         }
                     });
                 };
 
                 const updateLeaderboard = () => {
                     if (!user.value) return;
-
+                    
                     const newScore = {
                         username: user.value,
                         score: score.value,
                         timestamp: Date.now()
                     };
-
+                    
                     if (gameMode.value === 'multi') {
                         if (score.value > lastScore) {
                             socket.value.emit('score:update', newScore);
@@ -416,7 +438,7 @@
                         localStorage.setItem('topScores', JSON.stringify(scores));
                         topScores.value = scores;
                     }
-
+                    
                 };
 
                 const startGame = () => {
@@ -446,7 +468,7 @@
                 const startGameLoop = () => {
                     gameLoop = setInterval(() => {
                         if (isPaused.value) return;
-
+                        
                         balls.value.forEach((ball, index) => {
                             let currentSpeed = ball.speed;
                             if (activeSlowdown.value) {
@@ -455,15 +477,15 @@
                             ball.y += currentSpeed;
 
                             // Check collision with paddle
-                            if (ball.y > gameArea.value.offsetHeight - 20 &&
-                                ball.x > paddleX.value &&
+                            if (ball.y > gameArea.value.offsetHeight - 20 && 
+                                ball.x > paddleX.value && 
                                 ball.x < paddleX.value + 80) {
                                 balls.value.splice(index, 1);
-
+                                
                                 if (ball.powerUp) {
                                     activatePowerUp(ball.powerUpType);
                                 } else {
-                                    let points = ball.special ? 10 : 1; // Score is 1 for regular, 10 for special
+                                    let points = ball.special ? 10 : 1;
                                     if (activeMultiplier.value) {
                                         points *= 3;
                                     }
@@ -472,27 +494,25 @@
                                         coins.value++;
                                         localStorage.setItem(`coins_${user.value}`, coins.value);
                                     }
-                                    score.value += points;
-
                                     // Add coins for every 10 points scored
                                     if (score.value % 10 === 0) {
                                         coins.value += 1;
                                         localStorage.setItem(`coins_${user.value}`, coins.value);
                                     }
                                 }
-
+                                
                                 // Level up every 100 points
                                 if (score.value % 100 === 0) {
                                     level.value++;
                                     ball.speed = 2 + (level.value * 0.5);
                                 }
                             }
-
+                            
                             // Ball missed
                             if (ball.y > gameArea.value.offsetHeight) {
                                 balls.value.splice(index, 1);
                                 if (!activeShield.value) lives.value = Math.max(0, lives.value - 1);
-
+                                
                                 if (lives.value <= 0) {
                                     gameOver();
                                 }
@@ -504,7 +524,7 @@
                 const startBallSpawning = () => {
                     ballInterval = setInterval(() => {
                         if (isPaused.value) return;
-
+                        
                         const powerUpRoll = Math.random();
                         let isPowerUp = false;
                         let powerUpType = null;
@@ -530,22 +550,11 @@
                             special: !isPowerUp && Math.random() < (0.02 / level.value), // Scaled special ball chance
                             powerUp: isPowerUp,
                             powerUpType: powerUpType,
-                            color: getRandomBallColor(),
-                            shapeClass: isPowerUp ? getPowerUpShapeClass(powerUpType) : 'rounded-full' // Add shape class
+                            color: getRandomBallColor()
                         };
                         balls.value.push(ball);
                     }, 2000 - (level.value * 100));
                 };
-
-                const getPowerUpShapeClass = (type) => {
-                    switch(type) {
-                        case 'shield': return 'square-ball'; // Define square-ball class in CSS if needed or use inline style
-                        case 'slow': return 'triangle-ball'; // Define triangle-ball class in CSS if needed or use inline style
-                        case 'multiplier': return 'star-ball'; // Define star-ball class in CSS if needed or use inline style
-                        default: return 'rounded-full';
-                    }
-                };
-
 
                 const getRandomBallColor = () => {
                     // Random colors for regular balls
@@ -562,7 +571,7 @@
 
                 const movePaddle = (e) => {
                     if (!gameRunning.value || isPaused.value) return;
-
+                    
                     const rect = gameArea.value.getBoundingClientRect();
                     const x = e.clientX - rect.left - 40; // 40 is half paddle width
                     paddleX.value = Math.max(0, Math.min(x, gameArea.value.offsetWidth - 80));
@@ -578,17 +587,18 @@
                     gameRunning.value = false;
                     clearInterval(gameLoop);
                     clearInterval(ballInterval);
-
+                    
                     if (gameMode.value === 'multi' && socket.value) {
                         socket.value.emit('game:over', { username: user.value, score: score.value });
                     }
                     updateLeaderboard();
                 };
 
+                window.app = { upgradePowerUp };
+
                 onMounted(() => {
                     const savedUsername = localStorage.getItem('username');
                     if (savedUsername) user.value = savedUsername;
-                    initializeMultiplayer(); // Initialize multiplayer on mount for persistent leaderboard updates
                 });
 
                 onUnmounted(() => {
@@ -638,20 +648,5 @@
             }
         }).mount('#app');
     </script>
-
-<style>
-    .square-ball {
-        border-radius: 0; /* Make shield power-up square */
-    }
-
-    .triangle-ball {
-        clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* Make slow power-up triangle */
-    }
-
-    .star-ball {
-        -webkit-clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-        clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); /* Make multiplier power-up star */
-    }
-</style>
 </body>
 </html>

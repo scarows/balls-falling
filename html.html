@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1406200684468536"
+     crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Catcher Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+        <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-77WW18R8DZ"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-77WW18R8DZ');
+    </script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div id="app" class="min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl md:text-6xl font-bold text-blue-500 mb-4">Ball Catcher</h1>
+                <p v-if="!gameMode" class="text-lg text-gray-300">Catch the balls to score points!</p>
+                <div v-if="!gameMode" class="mt-4 p-4 bg-gray-800 rounded-lg text-sm text-gray-400">
+                    <h3 class="font-semibold text-gray-200 mb-1">How to Play:</h3>
+                    <p>- Enter a username and choose a game mode.</p>
+                    <p>- Move your mouse (or finger) to control the paddle.</p>
+                    <p>- Catch balls for points & coins. <span class="text-yellow-400">Golden Balls</span> are worth more!</p>
+                    <p>- Power-ups: Shield 🛡️, Slow ⏱️, Score Multiplier ✨ (Press SPACE to Pause/Resume).</p>
+                    <p>- Use coins in the Store for upgrades, skins & boosts.</p>
+                </div>
+
+                <!-- Game Mode Selection -->
+                <div v-if="!gameMode" class="mt-8 space-y-4">
+                    <div class="space-y-2">
+                        <input v-model="username"
+                               @keyup.enter="trySelectDefaultMode"
+                               type="text"
+                               placeholder="Enter your username"
+                               class="w-64 px-4 py-2 bg-gray-800 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="space-x-4">
+                        <button @click="selectMode('single')"
+                                class="px-6 py-3 bg-blue-500 rounded-lg hover:bg-blue-600 transition">
+                            Single Player
+                        </button>
+                        <button @click="selectMode('multi')"
+                                class="px-6 py-3 bg-green-500 rounded-lg hover:bg-green-600 transition">
+                            Multiplayer
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Game Info (Visible after mode selection) -->
+                <div v-if="gameMode" class="mt-4 text-sm md:text-base">
+                    <div class="flex flex-wrap justify-center items-center gap-2 md:gap-4 mb-2">
+                        <span class="text-green-400">Playing as: <span class="font-bold">{{ user }}</span></span>
+                        <span class="text-yellow-500">🪙 Coins: {{ coins }}</span>
+                        <span v-if="gameMode === 'single' && personalBestScore > 0" class="text-purple-400">🏆 Best: {{ personalBestScore }}</span>
+                    </div>
+                    <div class="flex flex-wrap justify-center items-center gap-2 md:gap-3">
+                         <button @click="openStoreModal"
+                                class="px-3 py-1 bg-purple-600 rounded-lg hover:bg-purple-700 text-xs md:text-sm">
+                            Store
+                        </button>
+                        <button v-if="canClaimDailyReward" @click="claimDailyReward"
+                                class="px-3 py-1 bg-yellow-600 rounded-lg hover:bg-yellow-700 text-xs md:text-sm animate-pulse">
+                            🎁 Claim Daily Coins!
+                        </button>
+                         <button @click="changeUsernamePrompt"
+                                class="px-3 py-1 bg-yellow-500 rounded-lg hover:bg-yellow-600 text-xs md:text-sm">
+                            Change Username
+                        </button>
+                        <button @click="toggleMute"
+                                class="px-3 py-1 bg-gray-600 rounded-lg hover:bg-gray-700 text-xs md:text-sm">
+                            {{ isMuted ? '🔇 Unmute' : '🔊 Mute' }}
+                        </button>
+                    </div>
+                    <div class="mt-2"> <!-- Active Boosts Display -->
+                        <span v-if="activeBoosts.shield" class="mx-1 px-2 py-0.5 text-xs bg-blue-700 rounded-full">🛡️ Next Game Shield</span>
+                        <span v-if="activeBoosts.score" class="mx-1 px-2 py-0.5 text-xs bg-purple-700 rounded-full">📈 Next Game +10% Score</span>
+                        <span v-if="activeBoosts.coins" class="mx-1 px-2 py-0.5 text-xs bg-yellow-700 rounded-full">💰 Next Game 2x Coins</span>
+                    </div>
+                    <div v-if="gameMode === 'multi'" class="mt-2">
+                         <span :class="{'text-green-400': socketConnected, 'text-red-500': !socketConnected}">
+                            Status: {{ socketConnected ? 'Connected' : 'Disconnected' }}
+                        </span>
+                        <span class="ml-4 text-yellow-400">
+                            Online: {{ onlinePlayers }}
+                        </span>
+                        <span class="ml-4 text-purple-400">
+                            Rank: #{{ playerRank || 'N/A' }}
+                        </span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Lives Display -->
+            <div v-if="gameMode" class="text-center mb-4 h-8">
+                <transition-group name="fade">
+                    <span v-for="life in lives" :key="'life-' + life" class="text-2xl text-red-500 mx-1 transition-opacity duration-500">❤️</span>
+                </transition-group>
+            </div>
+
+            <div v-if="gameMode" class="flex flex-col md:flex-row gap-8">
+                <!-- Game Area -->
+                <div class="flex-1">
+                    <div ref="gameArea"
+                         @mousemove="movePaddle"
+                         @touchmove="handleTouch"
+                         tabindex="0" 
+                         class="relative bg-gray-800 rounded-lg overflow-hidden cursor-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         :style="{ height: '400px' }">
+                        <!-- Paddle -->
+                        <div class="absolute bottom-0 h-4 rounded-full transition-all duration-100"
+                             :class="[selectedPaddleSkin.colorClass, {'paddle-shield-active': activeShield}]"
+                             :style="{ left: paddleX + 'px', width: selectedPaddleSkin.width || '80px' }"></div>
+
+                        <!-- Balls -->
+                        <div v-for="ball in balls"
+                             :key="ball.id"
+                             class="absolute w-4 h-4"
+                              :class="[
+                                ball.type === 'special' ? 'bg-yellow-400 animate-pulse shadow-lg shadow-yellow-200 rounded-full' : 
+                                ball.type === 'coin' ? 'bg-yellow-500 animate-bounce shadow-lg shadow-yellow-300 rounded-full' : 
+                                ball.color + ' rounded-full',
+                                ball.powerUp ? getPowerUpVisualClass(ball.powerUpType) : '', 
+                                ball.shapeClass || '' 
+                              ]"
+                             :style="{ left: ball.x + 'px', top: ball.y + 'px' }">
+                             <span v-if="ball.type === 'coin'" class="text-xs absolute inset-0 flex items-center justify-center text-yellow-900 font-bold">🪙</span>
+                        </div>
+
+                        <!-- Active Power-ups Display -->
+                        <div class="absolute top-12 right-4 text-sm">
+                            <div v-if="activeShield" class="text-blue-300 font-bold mb-1">🛡️ Shield: {{shieldTimer}}s</div>
+                            <div v-if="activeSlowdown" class="text-green-300 font-bold mb-1">⏱️ Slow: {{slowTimer}}s</div>
+                            <div v-if="activeMultiplier" class="text-purple-300 font-bold">✨ x{{ scoreMultiplierValue }}: {{multiplierTimer}}s</div>
+                        </div>
+                        <!-- Score Display -->
+                        <div class="absolute top-4 right-4 text-xl font-bold">
+                            Score: {{ score }}
+                        </div>
+
+                        <!-- Level Display -->
+                        <div class="absolute top-4 left-4 text-xl font-bold">
+                            Level: {{ level }}
+                        </div>
+                         <!-- Pause Overlay -->
+                        <div v-if="isPaused && gameRunning" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-4xl font-bold z-10">
+                            PAUSED
+                        </div>
+                        <!-- Game Over Overlay -->
+                        <div v-if="!gameRunning && pastGameScore > 0 && lives <=0" class="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center text-4xl font-bold z-10">
+                            GAME OVER!
+                            <p class="text-2xl mt-2">Final Score: {{ pastGameScore }}</p>
+                            <div v-if="isNewPersonalBest" class="text-yellow-400 text-lg mt-1 animate-pulse">🏆 New Personal Best! 🏆</div>
+                            <div v-if="finalBonusScore > 0" class="text-green-400 text-lg mt-1">+{{ finalBonusScore }} (Boost!)</div>
+                            <div v-if="finalCoinsEarned > 0" class="text-yellow-500 text-lg mt-1">+{{ finalCoinsEarned }} 🪙</div>
+                            <button @click="startGame" class="mt-4 px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 text-xl">Play Again</button>
+                        </div>
+                    </div>
+
+                    <!-- Game Controls -->
+                    <div class="mt-4 flex justify-center gap-4">
+                        <button @click="startGame"
+                                :disabled="gameRunning && !isPaused"
+                                class="px-6 py-2 bg-blue-500 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition">
+                            {{ (gameRunning && isPaused) || (!gameRunning && pastGameScore > 0 && lives <=0) ? 'Restart Game' : 'Start Game' }}
+                        </button>
+                        <button @click="pauseGame"
+                                :disabled="!gameRunning"
+                                class="px-6 py-2 bg-yellow-500 rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition">
+                            {{ isPaused ? 'Resume (SPACE)' : 'Pause (SPACE)' }}
+                        </button>
+                        <button @click="resetCurrentGamePrompt"
+                                :disabled="!gameMode"
+                                class="px-6 py-2 bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 transition">
+                            Reset Game
+                        </button>
+                        <button @click="goToMenuPrompt"
+                                :disabled="gameRunning && !isPaused"
+                                class="px-6 py-2 bg-purple-500 rounded-lg hover:bg-purple-600 disabled:opacity-50 transition">
+                            Back to Menu
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Leaderboard -->
+                <div class="md:w-96 bg-gray-800 p-6 rounded-lg">
+                    <h2 class="text-2xl font-bold mb-4">
+                        {{ gameMode === 'multi' ? 'Global Rankings' : 'My Top Scores' }}
+                    </h2>
+                    <div class="space-y-2 max-h-96 overflow-y-auto">
+                        <div v-for="(s, index) in displayedTopScores"
+                             :key="gameMode === 'multi' ? s.username + s.score + s.timestamp : s.username + s.score + s.timestamp + index" 
+                             :class="[
+                                'flex justify-between items-center p-2 rounded transition',
+                                s.username === user ? 'bg-blue-900 ring-2 ring-blue-400' : 'bg-gray-700'
+                             ]">
+                            <span class="font-bold"
+                                  :class="[
+                                    index < 3 && gameMode === 'multi' ? 'text-yellow-400' : 
+                                    index < 3 && gameMode === 'single' ? 'text-green-400' : 'text-gray-300'
+                                  ]">
+                                #{{ index + 1 }}
+                            </span>
+                            <div class="flex flex-col items-end">
+                                <span class="text-sm text-gray-300">{{ s.username }}</span>
+                                <span class="font-bold">{{ s.score }}</span>
+                            </div>
+                        </div>
+                         <div v-if="displayedTopScores.length === 0" class="text-gray-400 text-center py-4">
+                            No scores yet. Play a game!
+                        </div>
+                    </div>
+                    <div v-if="gameMode === 'multi'" class="mt-4 text-center text-sm text-gray-400">
+                        {{ socketMessage || "Scores update in real-time if connected." }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Store Modal -->
+        <div v-if="showStoreModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-gray-800 p-6 rounded-lg max-w-xl w-full m-4 overflow-y-auto" style="max-height: 90vh;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Store</h2>
+                    <button @click="closeStoreModal" class="text-2xl hover:text-red-500">&times;</button>
+                </div>
+                <p class="text-yellow-400 mb-4">Your Coins: 🪙 {{ coins }}</p>
+                
+                <h3 class="text-xl font-semibold mb-2 text-blue-400">Power-up Upgrades</h3>
+                <div class="space-y-3 mb-6">
+                    <div class="flex justify-between items-center p-2 bg-gray-700 rounded">
+                        <span>🛡️ Shield Duration ({{shieldUpgrade}}s)</span>
+                        <button @click="upgradePowerUp('shield')" :disabled="coins < getUpgradeCost('shield')"
+                                class="px-3 py-1 bg-blue-500 rounded hover:bg-blue-600 disabled:opacity-50">
+                            Upgrade ({{getUpgradeCost('shield')}} 🪙)
+                        </button>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-gray-700 rounded">
+                        <span>⏱️ Slow Duration ({{slowUpgrade}}s)</span>
+                        <button @click="upgradePowerUp('slow')" :disabled="coins < getUpgradeCost('slow')"
+                                class="px-3 py-1 bg-green-500 rounded hover:bg-green-600 disabled:opacity-50">
+                            Upgrade ({{getUpgradeCost('slow')}} 🪙)
+                        </button>
+                    </div>
+                    <div class="flex justify-between items-center p-2 bg-gray-700 rounded">
+                        <span>✨ Multiplier Duration ({{multiplierUpgrade}}s)</span>
+                        <button @click="upgradePowerUp('multiplier')" :disabled="coins < getUpgradeCost('multiplier')"
+                                class="px-3 py-1 bg-purple-500 rounded hover:bg-purple-600 disabled:opacity-50">
+                            Upgrade ({{getUpgradeCost('multiplier')}} 🪙)
+                        </button>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-semibold mb-2 text-green-400">Paddle Skins</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                    <div v-for="skin in availablePaddleSkins" :key="skin.id" class="flex justify-between items-center p-2 bg-gray-700 rounded">
+                        <div class="flex items-center">
+                            <div :class="[skin.colorClass, {'paddle-shield-active-preview': activeShieldPreview && previewSkinShield.id === skin.id }]" class="w-10 h-3 rounded-full mr-3" :style="{width: skin.width || '40px'}"></div>
+                            <span @mouseenter="toggleShieldPreview(skin, true)" @mouseleave="toggleShieldPreview(skin, false)">{{ skin.name }}</span>
+                        </div>
+                         <button v-if="!isSkinPurchased(skin.id)" @click="buySkin(skin)" :disabled="coins < skin.cost"
+                                class="px-3 py-1 bg-yellow-500 rounded hover:bg-yellow-600 disabled:opacity-50 text-xs">
+                            Buy ({{skin.cost}} 🪙)
+                        </button>
+                        <button v-else-if="selectedPaddleSkin.id !== skin.id" @click="selectSkin(skin)"
+                                class="px-3 py-1 bg-teal-500 rounded hover:bg-teal-600 text-xs">
+                            Select
+                        </button>
+                        <span v-else class="px-3 py-1 text-gray-400 text-xs">Selected</span>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-semibold mb-2 text-yellow-400">Consumable Boosts</h3>
+                <div class="space-y-3">
+                    <div v-for="boost in consumableBoosts" :key="boost.id" class="flex justify-between items-center p-2 bg-gray-700 rounded">
+                        <span>{{ boost.icon }} {{ boost.name }} <small class="text-gray-400">({{ boost.description }})</small></span>
+                        <button @click="buyBoost(boost)" :disabled="coins < boost.cost || activeBoosts[boost.id]"
+                                class="px-3 py-1 bg-orange-500 rounded hover:bg-orange-600 disabled:opacity-50 text-xs">
+                            {{ activeBoosts[boost.id] ? 'Active' : `Buy (${boost.cost} 🪙)` }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, onUnmounted, computed, watch } = Vue;
+
+        createApp({
+            setup() {
+                const gameArea = ref(null);
+                const paddleX = ref(0);
+                const balls = ref([]);
+                const score = ref(0);
+                const pastGameScore = ref(0);
+                const level = ref(1);
+                const lives = ref(1); 
+                const gameRunning = ref(false);
+                const isPaused = ref(false);
+                
+                const user = ref('');
+                const username = ref(localStorage.getItem('ballCatcher_username') || '');
+                const gameMode = ref(null);
+                
+                const coins = ref(0);
+                const topScores = ref([]); 
+                const localTopScores = ref([]);
+
+                // --- FIX: personalBestScore and canClaimDailyReward are computed refs ---
+                const personalBestScore = computed(() => {
+                    if (localTopScores.value.length > 0) {
+                        return localTopScores.value.reduce((max, scoreEntry) => scoreEntry.score > max ? scoreEntry.score : max, 0);
+                    }
+                    return 0;
+                });
+                const isNewPersonalBest = ref(false);
+                const finalBonusScore = ref(0);
+                const finalCoinsEarned = ref(0);
+
+                // Power-ups
+                const activeShield = ref(false);
+                const shieldTimer = ref(0);
+                const shieldUpgrade = ref(10);
+                const activeSlowdown = ref(false);
+                const slowTimer = ref(0);
+                const slowUpgrade = ref(10);
+                const activeMultiplier = ref(false);
+                const multiplierTimer = ref(0);
+                const multiplierUpgrade = ref(7);
+                const scoreMultiplierValue = ref(3);
+
+                // Store and Skins
+                const showStoreModal = ref(false);
+                const activeShieldPreview = ref(false);
+                const previewSkinShield = ref({});
+
+                const toggleShieldPreview = (skin, show) => {
+                    previewSkinShield.value = skin;
+                    activeShieldPreview.value = show;
+                };
+
+                const availablePaddleSkins = ref([
+                    { id: 'default_blue', name: 'Classic Blue', colorClass: 'bg-blue-500', cost: 0, width: '80px' },
+                    { id: 'fiery_red', name: 'Fiery Red', colorClass: 'bg-red-600', cost: 75, width: '80px' },
+                    { id: 'emerald_green', name: 'Emerald Green', colorClass: 'bg-green-500', cost: 75, width: '80px' },
+                    { id: 'wide_boy', name: 'Wide Boy', colorClass: 'bg-indigo-500', cost: 150, width: '120px' },
+                    { id: 'golden_glory', name: 'Golden Glory', colorClass: 'bg-yellow-400 shadow-md shadow-yellow-200', cost: 300, width: '85px' },
+                    { id: 'stealth_shadow', name: 'Stealth Shadow', colorClass: 'bg-gray-700 border border-gray-500', cost: 200, width: '75px' },
+                ]);
+                const purchasedPaddleSkins = ref(['default_blue']);
+                const selectedPaddleSkin = ref(availablePaddleSkins.value[0]);
+
+                // Consumable Boosts
+                const consumableBoosts = ref([
+                    { id: 'shield', name: 'Start Shield', icon: '🛡️', description: 'Shield active at game start', cost: 50 },
+                    { id: 'score', name: 'Score Boost', icon: '📈', description: '+10% to final score', cost: 75 },
+                    { id: 'coins', name: 'Coin Doubler', icon: '💰', description: '2x coins next game', cost: 100 },
+                ]);
+                const activeBoosts = ref({ shield: false, score: false, coins: false });
+
+                // Daily Reward
+                const lastDailyClaimTimestamp = ref(0);
+                const dailyRewardAmount = 30;
+                // --- FIX: canClaimDailyReward is a computed ref ---
+                const canClaimDailyReward = computed(() => {
+                    const now = Date.now();
+                    const twentyFourHours = 24 * 60 * 60 * 1000;
+                    return (now - lastDailyClaimTimestamp.value > twentyFourHours);
+                });
+
+                const claimDailyReward = () => {
+                    if (canClaimDailyReward.value) { // Access .value for computed ref in script
+                        playSound('buttonClick');
+                        coins.value += dailyRewardAmount;
+                        lastDailyClaimTimestamp.value = Date.now();
+                        saveUserData();
+                        playSound('coin', 0.5);
+                        alert(`You claimed your daily ${dailyRewardAmount} coins!`);
+                    }
+                };
+
+                // Multiplayer state
+                const socket = ref(null);
+                const onlinePlayers = ref(0);
+                const playerRank = ref(0);
+                const socketConnected = ref(false);
+                const socketMessage = ref('');
+
+                let gameLoop;
+                let ballInterval;
+                let powerUpTimers = {};
+                let lastScoreEmit = 0;
+                let totalCoinsEarnedThisGame = 0;
+
+                // Sound
+                const audioCtx = ref(null);
+                const isMuted = ref(JSON.parse(localStorage.getItem('ballCatcher_isMuted') || 'false'));
+
+                const playSound = (type, volume = 0.15) => {
+                    if (isMuted.value || !audioCtx.value) return;
+                    if (audioCtx.value.state === 'suspended') { audioCtx.value.resume().catch(e => console.error("Error resuming AudioContext:", e)); }
+                    
+                    const oscillator = audioCtx.value.createOscillator();
+                    const gainNode = audioCtx.value.createGain();
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.value.destination);
+                    
+                    let freq = 440, duration = 0.2, waveType = 'sine';
+
+                    switch (type) {
+                        case 'catch': freq = 440; duration = 0.08; break;
+                        case 'specialCatch': freq = 660; duration = 0.15; waveType = 'triangle'; break;
+                        case 'powerUp': freq = 880; duration = 0.25; waveType = 'sawtooth'; break;
+                        case 'miss': freq = 150; duration = 0.20; waveType = 'square'; break;
+                        case 'gameOver': freq = 100; duration = 0.7; waveType = 'sawtooth'; break;
+                        case 'coin': freq = 523.25; duration = 0.08; volume = Math.min(0.3, volume * 1.2); break;
+                        case 'buttonClick': freq = 300; duration = 0.05; waveType = 'square'; volume = 0.1; break;
+                    }
+                    oscillator.type = waveType;
+                    oscillator.frequency.setValueAtTime(freq, audioCtx.value.currentTime);
+                    gainNode.gain.setValueAtTime(volume, audioCtx.value.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.value.currentTime + duration);
+                    
+                    oscillator.start(audioCtx.value.currentTime);
+                    oscillator.stop(audioCtx.value.currentTime + duration + 0.05);
+                };
+                
+                const toggleMute = () => { playSound('buttonClick'); isMuted.value = !isMuted.value; localStorage.setItem('ballCatcher_isMuted', JSON.stringify(isMuted.value)); /* ... */ };
+                
+                const loadUserData = () => { /* ... (Ensure activeBoosts default is an object) ... */ 
+                    const storedUser = localStorage.getItem('ballCatcher_username');
+                    if (storedUser) {
+                        user.value = storedUser;
+                        username.value = storedUser;
+                        coins.value = parseInt(localStorage.getItem(`ballCatcher_coins_${user.value}`) || '0');
+                        shieldUpgrade.value = parseInt(localStorage.getItem(`ballCatcher_shieldUpgrade_${user.value}`) || '10');
+                        slowUpgrade.value = parseInt(localStorage.getItem(`ballCatcher_slowUpgrade_${user.value}`) || '10');
+                        multiplierUpgrade.value = parseInt(localStorage.getItem(`ballCatcher_multiplierUpgrade_${user.value}`) || '7');
+                        
+                        const storedSkins = JSON.parse(localStorage.getItem(`ballCatcher_purchasedSkins_${user.value}`) || "[]");
+                        purchasedPaddleSkins.value = ['default_blue', ...storedSkins.filter(s => s !== 'default_blue')];
+
+                        const selectedSkinId = localStorage.getItem(`ballCatcher_selectedSkin_${user.value}`) || 'default_blue';
+                        selectedPaddleSkin.value = availablePaddleSkins.value.find(s => s.id === selectedSkinId) || availablePaddleSkins.value[0];
+                        
+                        localTopScores.value = JSON.parse(localStorage.getItem(`ballCatcher_localTopScores_${user.value}`) || '[]');
+                        lastDailyClaimTimestamp.value = parseInt(localStorage.getItem(`ballCatcher_lastDailyClaim_${user.value}`) || '0');
+                        // Ensure activeBoosts is always an object, even if localStorage returns null
+                        const storedBoosts = localStorage.getItem(`ballCatcher_activeBoosts_${user.value}`);
+                        activeBoosts.value = storedBoosts ? JSON.parse(storedBoosts) : { shield: false, score: false, coins: false };
+
+                    } else { // Reset for a new user potential
+                        user.value = ''; 
+                        username.value = ''; // Keep username input field separate from active user for a moment
+                        coins.value = 0;
+                        shieldUpgrade.value = 10; slowUpgrade.value = 10; multiplierUpgrade.value = 7;
+                        purchasedPaddleSkins.value = ['default_blue'];
+                        selectedPaddleSkin.value = availablePaddleSkins.value[0];
+                        localTopScores.value = [];
+                        lastDailyClaimTimestamp.value = 0;
+                        activeBoosts.value = { shield: false, score: false, coins: false };
+                    }
+                };
+                
+                const saveUserData = () => { /* ... (same) ... */ };
+
+                const displayedTopScores = computed(() => {
+                    if (gameMode.value === 'multi') return topScores.value;
+                    return localTopScores.value;
+                });
+
+                // Store functions
+                const openStoreModal = () => { playSound('buttonClick'); showStoreModal.value = true; };
+                const closeStoreModal = () => { playSound('buttonClick'); showStoreModal.value = false; };
+                const getUpgradeCost = (type) => { /* ... (same logic, ensure no division by zero if base durations are met) ... */ 
+                    const baseCost = 10;
+                    let currentDuration, baseDuration, incrementPerLevel, costIncreasePerLevel;
+                    switch(type) {
+                        case 'shield': currentDuration = shieldUpgrade.value; baseDuration = 10; incrementPerLevel = 5; costIncreasePerLevel = 5; break;
+                        case 'slow': currentDuration = slowUpgrade.value; baseDuration = 10; incrementPerLevel = 5; costIncreasePerLevel = 5; break;
+                        case 'multiplier': currentDuration = multiplierUpgrade.value; baseDuration = 7; incrementPerLevel = 3; costIncreasePerLevel = 5; break;
+                        default: return baseCost;
+                    }
+                    const levelsUpgraded = Math.max(0, (currentDuration - baseDuration) / (incrementPerLevel || 1)); // Avoid div by zero if increment is 0
+                    return Math.floor(baseCost + (levelsUpgraded * costIncreasePerLevel));
+                };
+                const upgradePowerUp = (type) => { playSound('buttonClick'); /* ... (same) ... */ };
+                const isSkinPurchased = (skinId) => purchasedPaddleSkins.value.includes(skinId);
+                const buySkin = (skin) => { playSound('buttonClick'); /* ... (same) ... */ };
+                const selectSkin = (skin) => { playSound('buttonClick'); /* ... (same) ... */ };
+                
+                const buyBoost = (boostToBuy) => {
+                    playSound('buttonClick');
+                    if (coins.value >= boostToBuy.cost && !activeBoosts.value[boostToBuy.id]) {
+                        coins.value -= boostToBuy.cost;
+                        activeBoosts.value[boostToBuy.id] = true;
+                        saveUserData();
+                        alert(`${boostToBuy.name} boost purchased! It will be active for your next game.`);
+                    } else if (activeBoosts.value[boostToBuy.id]) {
+                        alert("Boost already active for next game.");
+                    } else {
+                        alert("Not enough coins!");
+                    }
+                };
+                const consumeBoosts = () => {
+                    if (activeBoosts.value.shield) {
+                        activatePowerUp('shield');
+                    }
+                    // Don't reset activeBoosts here; reset them in saveUserData after gameOver if they were applied
+                };
+
+
+                // Power-up functions
+                const getPowerUpVisualClass = (type) => { 
+                    const baseClass = 'animate-pulse shadow-lg ';
+                    switch(type) {
+                        case 'shield': return baseClass + 'bg-blue-400 shadow-blue-200 square-ball';
+                        case 'slow': return baseClass + 'bg-green-400 shadow-green-200 triangle-ball';
+                        case 'multiplier': return baseClass + 'bg-purple-400 shadow-purple-200 star-ball';
+                        default: return ''; // Should not happen if powerUpType is always set
+                    }
+                };
+                const activatePowerUp = (type) => { playSound('powerUp'); clearTimeout(powerUpTimers[type]); /* ... (same logic for timers) ... */ };
+                const resetPowerUps = () => { /* ... (same) ... */ };
+
+                // Game mode and navigation
+                const trySelectDefaultMode = () => {
+                    if (username.value.trim() && !gameMode.value) {
+                        selectMode('single');
+                    }
+                };
+                const selectMode = (mode) => {
+                    playSound('buttonClick');
+                    if (!username.value.trim()) {
+                        alert("Please enter a username.");
+                        return;
+                    }
+                    // Set user from username input FIRST, then load data
+                    user.value = username.value.trim();
+                    localStorage.setItem('ballCatcher_username', user.value);
+                    loadUserData(); 
+
+                    gameMode.value = mode;
+                    resetGame(true); // Full reset for new mode selection
+
+                    if (mode === 'multi') {
+                        initializeMultiplayer();
+                    } else {
+                        disconnectMultiplayer();
+                        topScores.value = [...localTopScores.value];
+                    }
+                };
+                
+                const goToMenuPrompt = () => { /* ... (same) ... */ };
+                const resetCurrentGamePrompt = () => { /* ... (same) ... */ };
+
+
+                // Multiplayer functions
+                const initializeMultiplayer = () => { /* ... (same) ... */ };
+                const disconnectMultiplayer = () => { /* ... (same) ... */ };
+                
+                const updateLeaderboardOnGameOver = () => {
+                    if (!user.value) return;
+                    let finalScoreWithBoost = pastGameScore.value;
+                    isNewPersonalBest.value = false;
+
+                    if (gameMode.value === 'single') {
+                        if (activeBoosts.value.score) {
+                            finalBonusScore.value = Math.floor(pastGameScore.value * 0.1);
+                            finalScoreWithBoost += finalBonusScore.value;
+                        } else {
+                            finalBonusScore.value = 0;
+                        }
+
+                        if (finalScoreWithBoost > personalBestScore.value) { // Directly use computed ref here
+                           isNewPersonalBest.value = true;
+                        }
+
+                        const newScoreEntry = { username: user.value, score: finalScoreWithBoost, timestamp: Date.now() };
+                        localTopScores.value.push(newScoreEntry);
+                        localTopScores.value.sort((a, b) => b.score - a.score || a.timestamp - b.timestamp);
+                        localTopScores.value = localTopScores.value.slice(0, 5);
+                        // saveUserData() will be called after boosts are reset
+                    }
+                };
+
+                const changeUsernamePrompt = () => { /* ... (same, ensure oldUsernameForSave is used consistently) ... */ };
+
+                // Game core functions
+                const resetGame = (fullResetToMenu = false) => { /* ... (same) ... */ };
+
+                const startGame = () => { /* ... (same, ensure consumeBoosts is called AFTER user data is loaded/set for the game) ... */ 
+                    playSound('buttonClick');
+                    if (!user.value) {
+                        alert("Please enter a username and select a game mode first.");
+                        return;
+                    }
+                    if (gameRunning.value && !isPaused.value) return;
+
+                    resetGame(false); 
+                    lives.value = 1;    
+                    gameRunning.value = true;
+                    isPaused.value = false;
+                    pastGameScore.value = 0; 
+                    totalCoinsEarnedThisGame = 0;
+                    
+                    consumeBoosts(); // This will apply shield boost if activeBoosts.shield is true
+
+                    startGameLoop();
+                    startBallSpawning();
+                    if (gameArea.value) gameArea.value.focus();
+                };
+
+                const pauseGame = () => { /* ... (same) ... */ };
+                const startGameLoop = () => { /* ... (same) ... */ };
+                const startBallSpawning = () => { /* ... (same) ... */ };
+                const getRandomBallColor = () => { /* ... (same) ... */ };
+                const movePaddle = (e) => { /* ... (same) ... */ };
+                const handleTouch = (e) => { /* ... (same) ... */ };
+
+                const gameOver = () => {
+                    playSound('gameOver');
+                    gameRunning.value = false;
+                    pastGameScore.value = score.value;
+                    
+                    finalCoinsEarned.value = totalCoinsEarnedThisGame;
+                    if (activeBoosts.value.coins) {
+                        coins.value += totalCoinsEarnedThisGame; // Add the other half for doubler
+                        finalCoinsEarned.value *= 2;
+                    }
+                    
+                    updateLeaderboardOnGameOver(); // This calculates score boost and new best
+
+                    // Now reset boosts AFTER they've been applied for score/coins and saved by leaderboard func
+                    activeBoosts.value = { shield: false, score: false, coins: false }; 
+                    saveUserData(); // Save final state including coins and reset boosts
+
+                    clearInterval(gameLoop);
+                    clearInterval(ballInterval);
+                    resetPowerUps();
+
+                    if (gameMode.value === 'multi' && socket.value && socket.value.connected) {
+                        socket.value.emit('game:over', { username: user.value, score: pastGameScore.value });
+                    }
+                };
+
+                // Spacebar to pause/resume
+                const handleSpacebar = (event) => {
+                    if (event.code === 'Space' && gameMode.value && gameRunning.value) {
+                        event.preventDefault();
+                        pauseGame();
+                    }
+                };
+
+                onMounted(() => {
+                    loadUserData(); // Load user data first
+                    if (!isMuted.value && !audioCtx.value) {
+                         try { audioCtx.value = new (window.AudioContext || window.webkitAudioContext)(); }
+                         catch (e) { console.error("Web Audio API not supported."); }
+                    }
+                    window.addEventListener('keydown', handleSpacebar);
+                });
+
+                onUnmounted(() => { /* ... (same) ... */ });
+                
+                watch(username, (newVal, oldVal) => {
+                    // This watcher might be redundant if user.value is the primary source of truth after mode selection.
+                    // It's primarily for the initial username input before mode is selected.
+                    if (!gameMode.value && newVal.trim() !== oldVal.trim()) {
+                       localStorage.setItem('ballCatcher_username', newVal.trim());
+                    }
+                });
+
+                // --- FIX: Return computed refs directly, not their .value ---
+                return {
+                    gameArea, paddleX, balls, score, pastGameScore, level, lives, gameRunning, isPaused,
+                    user, username, gameMode, coins, topScores, localTopScores, displayedTopScores, 
+                    personalBestScore, // Return the computed ref
+                    isNewPersonalBest, finalBonusScore, finalCoinsEarned,
+                    activeShield, shieldTimer, shieldUpgrade,
+                    activeSlowdown, slowTimer, slowUpgrade,
+                    activeMultiplier, multiplierTimer, multiplierUpgrade, scoreMultiplierValue,
+                    showStoreModal, openStoreModal, closeStoreModal, getUpgradeCost, upgradePowerUp,
+                    availablePaddleSkins, purchasedPaddleSkins, selectedPaddleSkin, isSkinPurchased, buySkin, selectSkin,
+                    activeShieldPreview, previewSkinShield, toggleShieldPreview,
+                    consumableBoosts, activeBoosts, buyBoost,
+                    canClaimDailyReward, // Return the computed ref
+                    claimDailyReward,   // Return the method
+                    socket, onlinePlayers, playerRank, socketConnected, socketMessage,
+                    isMuted, toggleMute, trySelectDefaultMode,
+                    selectMode, startGame, pauseGame, movePaddle, handleTouch,
+                    changeUsernamePrompt, resetGame, goToMenuPrompt, resetCurrentGamePrompt,
+                    getPowerUpVisualClass,
+                    activatePowerUp
+                };
+            }
+        }).mount('#app');
+    </script>
+
+<style>
+    /* ... (CSS remains the same) ... */
+    .paddle-shield-active {
+        box-shadow: 0 0 15px 5px rgba(147, 197, 253, 0.7); /* Blue glow */
+        border: 2px solid rgba(147, 197, 253, 0.9);
+        animation: pulse-shield 1.5s infinite ease-in-out;
+    }
+    .bg-red-600.paddle-shield-active { box-shadow: 0 0 15px 5px rgba(252, 165, 165, 0.7); border-color: rgba(252, 165, 165, 0.9); }
+    .bg-green-500.paddle-shield-active { box-shadow: 0 0 15px 5px rgba(110, 231, 183, 0.7); border-color: rgba(110, 231, 183, 0.9); }
+    .bg-indigo-500.paddle-shield-active { box-shadow: 0 0 15px 5px rgba(165, 180, 252, 0.7); border-color: rgba(165, 180, 252, 0.9); }
+    .bg-yellow-400.paddle-shield-active { box-shadow: 0 0 15px 5px rgba(252, 211, 77, 0.7); border-color: rgba(252, 211, 77, 0.9); }
+    .bg-gray-700.paddle-shield-active { box-shadow: 0 0 15px 5px rgba(156, 163, 175, 0.7); border-color: rgba(156, 163, 175, 0.9); }
+
+    .paddle-shield-active-preview { /* For store preview */
+        box-shadow: 0 0 8px 2px rgba(147, 197, 253, 0.7);
+        border: 1px solid rgba(147, 197, 253, 0.9);
+    }
+     .bg-red-600.paddle-shield-active-preview { box-shadow: 0 0 8px 2px rgba(252, 165, 165, 0.7); border-color: rgba(252, 165, 165, 0.9); }
+    .bg-green-500.paddle-shield-active-preview { box-shadow: 0 0 8px 2px rgba(110, 231, 183, 0.7); border-color: rgba(110, 231, 183, 0.9); }
+    /* ... add more for other skin colors if needed for preview ... */
+
+
+    @keyframes pulse-shield {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
+    }
+
+    .square-ball { border-radius: 0; }
+    .triangle-ball { 
+        width: 0; height: 0; 
+        border-left: 0.65rem solid transparent; 
+        border-right: 0.65rem solid transparent;
+        border-bottom: 1.1rem solid; 
+        background-color: transparent !important; 
+        border-radius: 0;
+    }
+    .triangle-ball.bg-green-400 { border-bottom-color: #68D391; }
+
+    .star-ball {
+        position: relative; display: block;
+        color: white; width: 0px; height: 0px;
+        border-right:  0.5rem solid transparent;
+        border-bottom: 0.35rem solid; 
+        border-left:   0.5rem solid transparent;
+        transform: rotate(35deg) scale(1.1); 
+        background-color: transparent !important; border-radius: 0;
+        margin: 0.2rem auto; 
+    }
+    .star-ball:before {
+        border-bottom: 0.4rem solid; 
+        border-left: 0.15rem solid transparent; border-right: 0.15rem solid transparent;
+        position: absolute; height: 0; width: 0;
+        top: -0.25rem; left: -0.32rem; 
+        display: block; content: ''; transform: rotate(-35deg);
+    }
+    .star-ball:after {
+        position: absolute; display: block; color: white;
+        top: 0.005rem; left: -0.52rem; 
+        width: 0px; height: 0px;
+        border-right: 0.5rem solid transparent;
+        border-bottom: 0.35rem solid;
+        border-left: 0.5rem solid transparent;
+        transform: rotate(-70deg); content: '';
+    }
+    .star-ball.bg-purple-400, 
+    .star-ball.bg-purple-400:before, 
+    .star-ball.bg-purple-400:after { 
+        border-bottom-color: #A78BFA; 
+    }
+
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.5s; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    #app { outline: none; } 
+    [ref="gameArea"]:focus { outline: none; }
+</style>
+</body>
+</html>
